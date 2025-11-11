@@ -8,6 +8,8 @@ title: Nabu - DSL support
 
 A Domain specific language (DSL) allows you to write code more easily for a specific domain,
 for example xml, json, jpa, etc.<br/>
+The DSL is a compiler feature not a language feature so it can work independently of the language
+we it is used in and can define it own rules.
 <br/>
 
 <h2>Implement</h2>
@@ -39,3 +41,44 @@ Implementations of the interfaces can be registered in the plugin.xml file.
     &lt;/extensions&gt;
     &lt;/plugin&gt;
 </pre>
+
+<h2>DSL example</h2>
+Take for example JPA. Writing a Predicate quickly results in hard to read code like this:
+
+<pre class="code">
+    fun findCompanyByEmployeeFirstName(employeeFirstName: String): Specification&lt;Company&gt; {
+        return (c : Root&lt;Company&gt;, q: CriteriaQuery&lt;?&gt;, cb: CriteriaBuilder) -> {
+            var e = (InnerJoin&lt;Company, Employee&gt;) c.employees;
+            var e = c.join(Company_.employees, JoinType.INNER);
+            return cb.equal(e.get(Employee_.FIRST_NAME), employeeFirstName);
+        };
+     }
+</pre>
+
+With a DSL you could write more readable code like this:
+
+<pre class="code">
+    fun findCompanyByEmployeeFirstName(employeeFirstName: String): Specification&lt;Company&gt; {
+        return (c : Root&lt;Company&gt;, q: CriteriaQuery&lt;?&gt;, cb: CriteriaBuilder) -> {
+            var e = (InnerJoin&lt;Company, Employee&gt;) c.employees;
+            return e.firstName == employeeFirstName;
+        };
+     }
+</pre>
+
+Were a join is defined with a cast using a DSL class (InnerJoin in this example)
+and access the fields of the entity directly.
+
+The code is transformed to the code below.
+As you can see the code doesn't use the static metamodel classes
+since the plugin has access to the code and can check if fields exists or not.
+
+<pre class="code">
+    fun findCompanyByEmployeeFirstName(employeeFirstName: String): Specification&lt;Company&gt; {
+        return (c : Root&lt;Company&gt;, q: CriteriaQuery&lt;?&gt;, cb: CriteriaBuilder) -> {
+            var e = c.join("employees", JoinType.INNER);
+            return cb.equal(e.get("firstName"), employeeFirstName);
+        };
+     }
+</pre>
+
